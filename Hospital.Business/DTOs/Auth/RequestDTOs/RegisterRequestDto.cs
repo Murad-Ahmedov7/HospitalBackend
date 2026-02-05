@@ -7,7 +7,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Data.SqlTypes;
 using System.Numerics;
 
-namespace Hospital.Business.DTOs.Auth
+namespace Hospital.Business.DTOs.Auth.RequestDTOs
 {
     public class RegisterRequestDto
     {

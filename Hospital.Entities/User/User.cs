@@ -21,12 +21,12 @@ namespace Hospital.Entities.User
         public string Email { get; private set; }
         public string Phone { get; private set; }
 
-        public string Password { get; private set; }
+        public string PasswordHash { get; private set; }
 
 
         private User() { }
 
-        public User(string fullName, string email,string password,string phone)
+        public User(string fullName, string email,string passwordHash,string phone)
         {
             //if (string.IsNullOrWhiteSpace(fullName))
             //    throw new DomainException("FullName is required");
@@ -37,7 +37,7 @@ namespace Hospital.Entities.User
             Id = Guid.NewGuid();
             FullName = fullName;
             Email = email;
-            Password = password;
+            PasswordHash = passwordHash;
             Phone= phone;
         }
 

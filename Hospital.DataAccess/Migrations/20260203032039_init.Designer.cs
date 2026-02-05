@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Hospital.DataAccess.Migrations
 {
     [DbContext(typeof(HospitalDbContext))]
-    [Migration("20260201005140_init")]
+    [Migration("20260203032039_init")]
     partial class init
     {
         /// <inheritdoc />
@@ -39,11 +39,12 @@ namespace Hospital.DataAccess.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Password")
+                    b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Phone")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
