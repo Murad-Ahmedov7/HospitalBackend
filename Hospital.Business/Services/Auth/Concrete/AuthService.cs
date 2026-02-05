@@ -116,9 +116,6 @@ namespace Hospital.Business.Services.Auth.Concrete
                 new Claim(JwtRegisteredClaimNames.Iat,
                     DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(),
                     ClaimValueTypes.Integer64),
-
-                // ASP.NET Core üçün rahatlıq
-                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())
             };
 
             var expireMinutes = int.Parse(jwtSection["ExpireMinutes"]!);
@@ -134,7 +131,26 @@ namespace Hospital.Business.Services.Auth.Concrete
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
     }
+
+
+
+
+
+  //  {
+  //"sub": "5",                                   // ✅ UserId (JWT standard)
+  //"iat": 1700000000,                            // ✅ Token-in yaradılma vaxtı
+  //"exp": 1700003600,                            // ✅ Token-in bitmə vaxtı
+  //"iss": "your-issuer",                         // ✅ Issuer (appsettings-dən)
+  //"aud": "your-audience",                       // ✅ Audience (appsettings-dən)
+  //"http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier": "5"
+  //                                              // ✅ UserId (ASP.NET Core üçün)
+  //}  tokenin ici
+
+
+    //jwt decode
 }
+
+
 
 //2️⃣ GenerateJwtToken — JWT NECƏ YARADILIR?
 

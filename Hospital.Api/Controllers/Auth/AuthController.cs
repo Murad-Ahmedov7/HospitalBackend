@@ -39,8 +39,6 @@ namespace Hospital.Api.Controllers.Auth
                 return Ok(new LoginResponseDto
                 {
                     Token = token!,
-                    UserId = userId!.Value,
-                    ExpiresIn = expiresIn!.Value
                 });
             }
 
