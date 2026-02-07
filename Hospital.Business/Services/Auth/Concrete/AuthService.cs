@@ -1,6 +1,6 @@
 ﻿using Azure.Core;
 using Hospital.Business.DTOs.Auth.RequestDTOs;
-using Hospital.Business.Enums;
+using Hospital.Business.Enums.Auth;
 using Hospital.Business.Services.Auth.Abstract;
 using Hospital.DataAccess.Repositories.Auth.Abstract;
 using Hospital.Entities.User;
@@ -90,6 +90,42 @@ namespace Hospital.Business.Services.Auth.Concrete
 
         }
 
+        
+        public async Task<ChangePasswordStatus> ChangePasswordAsync(Guid userId, ChangePasswordRequestDto dto)
+        {
+            var user=await _userRepository.GetByIdAsync(userId);
+
+            if (user == null) return ChangePasswordStatus.UserNotFound;
+
+
+            if (user.PasswordHash == null) return ChangePasswordStatus.GoogleAccount; 
+
+
+            //Əgər istifadəçi Google ilə qeydiyyatdan keçibsə, onun parol hash-i null olacaq və bu halda parol dəyişdirilməsinə icazə verilməməlidir.
+
+
+            //burada return-i digeri enum ile muqayise et ferqe bax.!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+            var passwordValid = BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.PasswordHash);
+
+            var samePassword = BCrypt.Net.BCrypt.Verify(dto.NewPassword, user.PasswordHash);
+
+
+
+            if (!passwordValid) return ChangePasswordStatus.WrongPassword;
+            
+
+            if (samePassword)  return ChangePasswordStatus.PasswordUnchanged;
+
+
+
+
+            user.ChangePassword(dto.NewPassword);
+
+            await _userRepository.SaveChangesAsync();
+
+            return ChangePasswordStatus.Success;
+        }
 
 
         // ================= JWT GENERATION =================   
@@ -116,6 +152,17 @@ namespace Hospital.Business.Services.Auth.Concrete
                 new Claim(JwtRegisteredClaimNames.Iat,
                     DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(),
                     ClaimValueTypes.Integer64),
+
+
+                //new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())
+
+                    //Yəni sən token yaradanda bunu yazmısan:
+
+                    //new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString())
+
+                    //ASP.NET Core bunu avtomatik olaraq çevirib:
+                    //ClaimTypes.NameIdentifier
+                    //➡️ Ona görə də ayrıca NameIdentifier yazmasan da işləyib.
             };
 
             var expireMinutes = int.Parse(jwtSection["ExpireMinutes"]!);
@@ -137,704 +184,13 @@ namespace Hospital.Business.Services.Auth.Concrete
 
 
   //  {
-  //"sub": "5",                                   // ✅ UserId (JWT standard)
-  //"iat": 1700000000,                            // ✅ Token-in yaradılma vaxtı
-  //"exp": 1700003600,                            // ✅ Token-in bitmə vaxtı
-  //"iss": "your-issuer",                         // ✅ Issuer (appsettings-dən)
-  //"aud": "your-audience",                       // ✅ Audience (appsettings-dən)
-  //"http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier": "5"
-  //                                              // ✅ UserId (ASP.NET Core üçün)
-  //}  tokenin ici
+
 
 
     //jwt decode
 }
 
+//kodu cox tehlukesiz yazmaq yorurrr
 
 
-//2️⃣ GenerateJwtToken — JWT NECƏ YARADILIR?
-
-//Bu metodun işi:
-//👉 user məlumatını götür → imzala → JWT string qaytar
-
-//🔹 Addım 1 — JWT config oxunur
-//var jwtSection = _configuration.GetSection("Jwt");
-
-
-//Bu hissəni oxuyur:
-
-//"Jwt": {
-//  "Key": "...",
-//  "Issuer": "...",
-//  "Audience": "...",
-//  "ExpireMinutes": 60
-//}
-
-//🔹 Addım 2 — Secret key hazırlanır
-//var keyString = jwtSection["Key"]
-//    ?? throw new Exception("JWT Key is missing");
-
-
-//Key olmazsa → sistem işləməməlidir
-
-//Bu düzgün yanaşmadır
-
-//var key = new SymmetricSecurityKey(
-//    Encoding.UTF8.GetBytes(keyString)
-//);
-
-
-//👉 String → byte[]
-//👉 HMAC SHA256 yalnız byte[] ilə işləyir
-
-//🔹 Addım 3 — Signing credentials
-//var credentials = new SigningCredentials(
-//    key,
-//    SecurityAlgorithms.HmacSha256
-//);
-
-
-//Bu deməkdir ki:
-
-//“Token bu key ilə imzalanacaq”
-
-//⚠️ Burada encrypt yoxdur, yalnız sign var.
-
-//🔹 Addım 4 — Claims yığılır
-//var claims = new List<Claim>
-//{
-//    new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-
-//sub
-
-//JWT standard claim
-
-//“Bu token kim üçündür?”
-
-//new Claim(
-//    JwtRegisteredClaimNames.Iat,
-//    DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(),
-//    ClaimValueTypes.Integer64),
-
-//iat
-
-//Token nə vaxt yaradılıb
-
-//Unix timestamp
-
-//Security üçün faydalıdır
-
-//new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())
-
-//NameIdentifier
-
-//ASP.NET Core üçün rahatlıq
-
-//HttpContext.User.FindFirst(...) ilə asan oxunur
-
-//🔹 Addım 5 — Expire hesablanır
-//var expireMinutes =
-//    int.Parse(jwtSection["ExpireMinutes"]!);
-
-
-//Token:
-
-//expires: DateTime.UtcNow.AddMinutes(expireMinutes)
-
-
-//👉 Bu vaxt keçəndən sonra token ölür
-
-//🔹 Addım 6 — Token yaradılır
-//var token = new JwtSecurityToken(
-//    issuer: jwtSection["Issuer"],
-//    audience: jwtSection["Audience"],
-//    claims: claims,
-//    expires: ...,
-//    signingCredentials: credentials
-//);
-
-
-//Burada:
-
-//kim yaradıb → issuer
-
-//kim üçündür → audience
-
-//içində nə var → claims
-
-//nə vaxta qədər → expires
-
-//kim imzalayıb → key
-
-//🔹 Addım 7 — String-ə çevrilir
-//return new JwtSecurityTokenHandler().WriteToken(token);
-
-
-//➡️ Nəticə:
-
-//eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-
-
-//Bu:
-
-//DB-də saxlanmır
-
-//server-də saxlanmır
-
-//client-ə göndərilir
-
-//3️⃣ ÜMUMİ AXIN (BÜTÖV ŞƏKİL)
-//Client → Login (email + password)
-//        ↓
-//AuthService
-//  → User yoxlanır
-//  → Parol yoxlanır
-//  → JWT yaradılır
-//        ↓
-//Client token alır
-//        ↓
-//Sonrakı request-lər:
-//Authorization: Bearer <token>
-//2️⃣ GenerateJwtToken — JWT NECƏ YARADILIR?
-
-//Bu metodun işi:
-//👉 user məlumatını götür → imzala → JWT string qaytar
-
-//🔹 Addım 1 — JWT config oxunur
-//var jwtSection = _configuration.GetSection("Jwt");
-
-
-//Bu hissəni oxuyur:
-
-//"Jwt": {
-//  "Key": "...",
-//  "Issuer": "...",
-//  "Audience": "...",
-//  "ExpireMinutes": 60
-//}
-
-//🔹 Addım 2 — Secret key hazırlanır
-//var keyString = jwtSection["Key"]
-//    ?? throw new Exception("JWT Key is missing");
-
-
-//Key olmazsa → sistem işləməməlidir
-
-//Bu düzgün yanaşmadır
-
-//var key = new SymmetricSecurityKey(
-//    Encoding.UTF8.GetBytes(keyString)
-//);
-
-
-//👉 String → byte[]
-//👉 HMAC SHA256 yalnız byte[] ilə işləyir
-
-//🔹 Addım 3 — Signing credentials
-//var credentials = new SigningCredentials(
-//    key,
-//    SecurityAlgorithms.HmacSha256
-//);
-
-
-//Bu deməkdir ki:
-
-//“Token bu key ilə imzalanacaq”
-
-//⚠️ Burada encrypt yoxdur, yalnız sign var.
-
-//🔹 Addım 4 — Claims yığılır
-//var claims = new List<Claim>
-//{
-//    new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-
-//sub
-
-//JWT standard claim
-
-//“Bu token kim üçündür?”
-
-//new Claim(
-//    JwtRegisteredClaimNames.Iat,
-//    DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(),
-//    ClaimValueTypes.Integer64),
-
-//iat
-
-//Token nə vaxt yaradılıb
-
-//Unix timestamp
-
-//Security üçün faydalıdır
-
-//new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())
-
-//NameIdentifier
-
-//ASP.NET Core üçün rahatlıq
-
-//HttpContext.User.FindFirst(...) ilə asan oxunur
-
-//🔹 Addım 5 — Expire hesablanır
-//var expireMinutes =
-//    int.Parse(jwtSection["ExpireMinutes"]!);
-
-
-//Token:
-
-//expires: DateTime.UtcNow.AddMinutes(expireMinutes)
-
-
-//👉 Bu vaxt keçəndən sonra token ölür
-
-//🔹 Addım 6 — Token yaradılır
-//var token = new JwtSecurityToken(
-//    issuer: jwtSection["Issuer"],
-//    audience: jwtSection["Audience"],
-//    claims: claims,
-//    expires: ...,
-//    signingCredentials: credentials
-//);
-
-
-//Burada:
-
-//kim yaradıb → issuer
-
-//kim üçündür → audience
-
-//içində nə var → claims
-
-//nə vaxta qədər → expires
-
-//kim imzalayıb → key
-
-//🔹 Addım 7 — String-ə çevrilir
-//return new JwtSecurityTokenHandler().WriteToken(token);
-
-
-//➡️ Nəticə:
-
-//eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-
-
-//Bu:
-
-//DB-də saxlanmır
-
-//server-də saxlanmır
-
-//client-ə göndərilir
-
-//3️⃣ ÜMUMİ AXIN (BÜTÖV ŞƏKİL)
-//Client → Login (email + password)
-//        ↓
-//AuthService
-//  → User yoxlanır
-//  → Parol yoxlanır
-//  → JWT yaradılır
-//        ↓
-//Client token alır
-//        ↓
-//Sonrakı request-lər:
-//Authorization: Bearer <token>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//SƏNİN GÖRDÜYÜN SƏTİR
-//var expireMinutes = int.Parse(_configuration["Jwt:ExpireMinutes"]!);
-
-
-//Bu sətir sadə görünür, amma 3 şey eyni anda edir.
-
-//1️⃣ _configuration["Jwt:ExpireMinutes"] — BU NƏDİR?
-
-//Bu, appsettings.json-dan bir dəyər oxuyur.
-
-//Sənin config:
-
-//"Jwt": {
-//  "ExpireMinutes": 60
-//}
-
-
-//ASP.NET Core-da:
-
-//_configuration["Jwt:ExpireMinutes"]
-
-
-//deməkdir:
-
-//Jwt bölməsinin içindəki ExpireMinutes dəyərini oxu
-
-//⚠️ Burada gələn tip:
-
-//string ("60")
-
-//Çünki config həmişə string qaytarır.
-
-//2️⃣ int.Parse(...) — NİYƏ LAZIMDIR?
-
-//Sən token yaratarkən bunu yazırsan:
-
-//DateTime.UtcNow.AddMinutes(expireMinutes)
-
-
-//AddMinutes double / int istəyir, string yox.
-
-//Ona görə:
-
-//"60"  ❌
-//60    ✅
-
-
-//int.Parse string → int çevirir.
-
-//3️⃣ ! (NULL-FORGIVING OPERATOR) — BU NƏDİR?
-
-//Bu işarə compiler-ə yalan danışmaqdır 🙂
-//Amma şüurlu yalandır.
-
-//_configuration["Jwt:ExpireMinutes"]!
-
-
-//deməkdir:
-
-//“Mən bilirəm ki, bu dəyər null deyil, sən narahat olma.”
-
-//Əgər config-də bu açar yoxdursa:
-
-//runtime-da exception atılacaq
-
-//bu normaldır, çünki auth düzgün qurulmayıb
-
-//4️⃣ BU SƏTİRİN MƏNTİQİ BİR CÜMLƏ İLƏ
-
-//Server appsettings.json-dan tokenin neçə dəqiqə yaşayacağını oxuyur və onu hesablamada istifadə etmək üçün int-ə çevirir.SƏNİN GÖRDÜYÜN SƏTİR
-//var expireMinutes = int.Parse(_configuration["Jwt:ExpireMinutes"]!);
-
-
-//Bu sətir sadə görünür, amma 3 şey eyni anda edir.
-
-//1️⃣ _configuration["Jwt:ExpireMinutes"] — BU NƏDİR?
-
-//Bu, appsettings.json-dan bir dəyər oxuyur.
-
-//Sənin config:
-
-//"Jwt": {
-//  "ExpireMinutes": 60
-//}
-
-
-//ASP.NET Core-da:
-
-//_configuration["Jwt:ExpireMinutes"]
-
-
-//deməkdir:
-
-//Jwt bölməsinin içindəki ExpireMinutes dəyərini oxu
-
-//⚠️ Burada gələn tip:
-
-//string ("60")
-
-//Çünki config həmişə string qaytarır.
-
-//2️⃣ int.Parse(...) — NİYƏ LAZIMDIR?
-
-//Sən token yaratarkən bunu yazırsan:
-
-//DateTime.UtcNow.AddMinutes(expireMinutes)
-
-
-//AddMinutes double / int istəyir, string yox.
-
-//Ona görə:
-
-//"60"  ❌
-//60    ✅
-
-
-//int.Parse string → int çevirir.
-
-//3️⃣ ! (NULL-FORGIVING OPERATOR) — BU NƏDİR?
-
-//Bu işarə compiler-ə yalan danışmaqdır 🙂
-//Amma şüurlu yalandır.
-
-//_configuration["Jwt:ExpireMinutes"]!
-
-
-//deməkdir:
-
-//“Mən bilirəm ki, bu dəyər null deyil, sən narahat olma.”
-
-//Əgər config-də bu açar yoxdursa:
-
-//runtime-da exception atılacaq
-
-//bu normaldır, çünki auth düzgün qurulmayıb
-
-//4️⃣ BU SƏTİRİN MƏNTİQİ BİR CÜMLƏ İLƏ
-
-//Server appsettings.json-dan tokenin neçə dəqiqə yaşayacağını oxuyur və onu hesablamada istifadə etmək üçün int-ə çevirir.
-
-
-
-//2️⃣ NİYƏ LAZIMDIR?
-
-//Təsəvvür et ki, bunlar kodun içində olsaydı:
-
-//var expireMinutes = 60;
-//var jwtKey = "my-secret-key";
-//var connectionString = "...";
-
-
-//❌ Dəyişmək üçün:
-
-//kodu dəyiş
-
-//yenidən build et
-
-//yenidən deploy et
-
-//Configuration ilə:
-
-//sadəcə config dəyişir
-
-//kod toxunulmur
-
-//3️⃣ HARADAN GƏLİR CONFIGURATION?
-
-//ASP.NET Core-da configuration bir yerdən yox, bir neçə mənbədən oxunur:
-
-//appsettings.json
-
-//appsettings.Development.json
-
-//Environment variables
-
-//User secrets
-
-//Command line
-
-//Hamısı birləşdirilir → IConfiguration
-
-
-
-
-
-
-
-
-
-
-
-
-//typed oxuma nedir?
-
-//“Typed oxuma” (type-safe reading) — configuration-dan gələn string dəyəri avtomatik olaraq düzgün tipə (int, bool, TimeSpan və s.) çevirib almaqdır.
-
-//Sadə müqayisə
-//❌ Typed OLMAYAN (manual parse)
-//var expireMinutes = int.Parse(_configuration["Jwt:ExpireMinutes"]!);
-
-
-//Problemlər:
-
-//Dəyər null olarsa → exception
-
-//Dəyər "abc" olarsa → exception
-
-//Tip təhlükəsizliyi yoxdur
-
-//✅ Typed OXUMA (tövsiyə olunan)
-//var expireMinutes = _configuration.GetValue<int>("Jwt:ExpireMinutes");typex oxuma nedir?
-
-//“Typed oxuma” (type-safe reading) — configuration-dan gələn string dəyəri avtomatik olaraq düzgün tipə (int, bool, TimeSpan və s.) çevirib almaqdır.
-
-//Sadə müqayisə
-//❌ Typed OLMAYAN (manual parse)
-//var expireMinutes = int.Parse(_configuration["Jwt:ExpireMinutes"]!);
-
-
-//Problemlər:
-
-//Dəyər null olarsa → exception
-
-//Dəyər "abc" olarsa → exception
-
-//Tip təhlükəsizliyi yoxdur
-
-//✅ Typed OXUMA (tövsiyə olunan)
-//var expireMinutes = _configuration.GetValue<int>("Jwt:ExpireMinutes");
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//PRAKTİK YOL XƏRİTƏSİ (tövsiyə)
-
-//1️⃣ İndi
-//→ bu yazdığın custom auth-u bitir və başa düş
-
-//2️⃣ Sonra (1–2 həftə)
-//→ eyni sistemi ASP.NET Identity ilə yenidən yaz
-
-//3️⃣ Onda
-//→ fərqi 100% anlayacaqsan:
-
-//“Identity nəyi mənim yerimə edir?”
-
-//“Harada məni məhdudlaşdırır?”
-
-//1 CÜMLƏLİK YEKUN
-
-//Identity auth-u tez qurmaq üçündür, amma auth-u başa düşmək üçün əvvəl özün yazmalısan — sən hazırda düz yoldasan.
-
-//İstəsən növbəti addımda:
-
-//sənin mövcud auth-u Identity-yə necə miqrasiya etmək olar,
-
-//ya da custom auth vs Identity müqayisəsini konkret maddələrlə edim.
-
-
-
-
-
-
-
-
-
-
-//🔹 Enum error → client üçün
-
-//UI nə göstərəcək?
-
-//Hansı mesaj çıxacaq?
-
-//Hansı flow davam edəcək?
-
-//🔹 Log → sən və sistem üçün
-
-//Nə baş verdi?
-
-//Niyə baş verdi?
-
-//Harada qırıldı?
-
-//Bunlar eyni problemə baxır, amma fərqli tərəfdən.
-
-//2️⃣ NİYƏ ENUM TƏK BAŞINA YETƏRLI DEYİL?
-
-//Təsəvvür et:
-
-//LoginStatus.InvalidPassword
-
-
-//Client bunu görür — OK.
-
-//Amma sən bunları bilmirsən:
-
-//neçə dəfə olub?
-
-//hansı IP-dən?
-
-//brute-force var?
-
-//saat neçədə çoxalır?
-
-//➡️ Enum statik nəticədir, iz buraxmır.
-
-//3️⃣ REAL SƏNARİ (çox vacib)
-//Client-ə gedən:
-//{
-//    "status": "InvalidPassword"
-//}
-
-//Sənin log-da görməli olduğun:
-//[Warning] Login failed. Invalid password. Email: x @x.com IP: 10.2.1.7
-
-
-//Əgər log YOXDURSA:
-
-//sistem kor olur
-
-//debugging mümkün olmur
-
-//security riskləri görünmür
-
-//4️⃣ ƏN DÜZGÜN KOMBO (TÖVSİYƏ)
-
-//Enum → nəticəni ifadə edir
-//Log → hadisəni sənə izah edir
-
-//Bu best practice-dir.
-
-//5️⃣ NECƏ BİRLƏŞDİRİLİR? (qısa nümunə)
-//if (user == null)
-//{
-//    _logger.LogWarning(
-//        "Login failed. User not found. Email: {Email}",
-//        dto.Email
-//    );
-
-//return LoginStatus.UserNotFound;
-//}
-
-
-//Client:
-
-//enum alır
-
-//Sən:
-
-//log görürsən
-
-//➡️ hamı razıdır.
-
-//6️⃣ NƏ ZAMAN LOG YAZMAYA BİLƏRSƏN?
-
-//ÇOX nadir hallarda:
-
-//test layihəsi
-
-//POC
-
-//demo
-
-//Real backend-də → yox.
-
-//7️⃣ 1 CÜMLƏLİK QAYDA
-
-//Enum istifadəçiyə cavabdır, log isə sistemin yaddaşıdır — biri o birinin yerini tutmur.
-
-//İstəsən növbəti addımda:
-
-//enum +log + HTTP status ideal kombinasiyasını,
-
-//ya da login üçün tam log strategiyasını
-//konkret kodla göstərə bilərəm.
+    

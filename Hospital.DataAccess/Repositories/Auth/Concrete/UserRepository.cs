@@ -28,6 +28,12 @@ namespace Hospital.DataAccess.Repositories.Auth.Concrete
 
         }
 
+        public async Task <User?> GetByIdAsync(Guid id)
+        {
+            return 
+                await _context.Users.FirstOrDefaultAsync(x=>x.Id== id);
+        }
+
         public async Task SaveChangesAsync()
         {
             await _context.SaveChangesAsync();

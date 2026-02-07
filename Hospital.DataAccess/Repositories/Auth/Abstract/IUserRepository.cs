@@ -9,6 +9,8 @@ namespace Hospital.DataAccess.Repositories.Auth.Abstract
         Task AddAsync(User user);
 
         Task<User?> GetByEmailAsync(string email);
+
+        Task<User?> GetByIdAsync(Guid id);
         Task SaveChangesAsync();
     }
 }
