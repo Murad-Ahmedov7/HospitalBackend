@@ -35,7 +35,6 @@ namespace Hospital.Api.Controllers.Auth
         [HttpPost("login")]
         public async Task <IActionResult> Login([FromBody] LoginRequestDto dto)
         {
-            //biz bu kodda deconstruction edirik.
             var (status,token, userId, expiresIn) = await _authService.LoginAsnyc(dto);
 
 
@@ -62,9 +61,6 @@ namespace Hospital.Api.Controllers.Auth
 
 
 
-
-            //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!duran kimi bu sehv mesaj return etme qaydalarina bax.(SmartTOur ile muqayise)
-
          
 
         }
@@ -83,9 +79,7 @@ namespace Hospital.Api.Controllers.Auth
 
             var result=await _authService.ChangePasswordAsync(userId, dto);
 
-            //Deconstruction yalnız tuple və ya Deconstruct-i olan tiplər üçündür; enum və tək dəyər üçün olmaz.
 
-            //Deconstruction üçün dəyər tək olmamalıdır; enum təkdirsə olmaz, amma başqa dəyərlərlə birlikdə qaytarılarsa olar.
 
 
             if(result==ChangePasswordStatus.GoogleAccount) return BadRequest(new { message = "Google hesabı ilə qeydiyyatdan keçmiş istifadəçilər şifrəni dəyişə bilməzlər." });
@@ -102,22 +96,12 @@ namespace Hospital.Api.Controllers.Auth
 
 
 
-        //[Authorize]
-        //[HttpGet("whoami")]
-        //public IActionResult WhoAmI()
-        //{
-        //    return Ok(new
-        //    {
-        //        IsAuthenticated = User.Identity?.IsAuthenticated,
-        //        Claims = User.Claims.Select(c => new { c.Type, c.Value })
-        //    });
-        //}
+
 
     }
 }
 
 
-//private,protected,internal,public access modifier-lar (nece isledim) read
 
 
 

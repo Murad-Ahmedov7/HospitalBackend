@@ -16,5 +16,3 @@ namespace Hospital.Business.Enums.Auth
     }
 }
 
-
-//enum bu yazilis duzgundur?(reqemsiz ve tam nedi)

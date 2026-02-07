@@ -56,19 +56,7 @@ namespace Hospital.Business.Services.Auth.Concrete
 
 
 
-            //Enum type olsa da, onun üzvləri yalnız type adı ilə istifadə olunur.
-            //Enum - dan olan dəyişənlər üzərindən enum üzvlərinə müraciət etmək mümkün deyil.
-            //Doğru: LoginStatus.Success
-            //Yanlış: status.Success
 
-
-
-            //Controller - də status enum-un dəyərini saxlayan dəyişəndir.
-            //Enum üzvləri (Success, InvalidCredentials və s.) isə yalnız enum-un tipi(LoginStatus) vasitəsilə istifadə olunur.
-
-
-
-            //Server, istifadəçinin yazdığı parolu, DB - dəki hash -in içində olan eyni salt və eyni qayda ilə yenidən hash edir və nəticəni müqayisə edir.
 
             if (!passwordValid)
             {
@@ -81,11 +69,6 @@ namespace Hospital.Business.Services.Auth.Concrete
             return (LoginStatus.Success,token,user.Id,expireMinutes*60);
 
 
-
-            //Biz property-lərə(result.token və s.) müraciət edə bilirik, çünki funksiya adlandırılmış tuple(named tuple) qaytarır.
-
-
-            //Tuple - da null yaza bilməyinin səbəbi onun elementlərinin nullable(?) elan olunmasıdır; DTO - da isə Guid və int nullable olmadığı üçün bu mümkün deyil.
 
 
         }
@@ -101,10 +84,6 @@ namespace Hospital.Business.Services.Auth.Concrete
             if (user.PasswordHash == null) return ChangePasswordStatus.GoogleAccount; 
 
 
-            //Əgər istifadəçi Google ilə qeydiyyatdan keçibsə, onun parol hash-i null olacaq və bu halda parol dəyişdirilməsinə icazə verilməməlidir.
-
-
-            //burada return-i digeri enum ile muqayise et ferqe bax.!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
             var passwordValid = BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.PasswordHash);
 
@@ -154,15 +133,6 @@ namespace Hospital.Business.Services.Auth.Concrete
                     ClaimValueTypes.Integer64),
 
 
-                //new Claim(ClaimTypes.NameIdentifier, user.Id.ToString())
-
-                    //Yəni sən token yaradanda bunu yazmısan:
-
-                    //new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString())
-
-                    //ASP.NET Core bunu avtomatik olaraq çevirib:
-                    //ClaimTypes.NameIdentifier
-                    //➡️ Ona görə də ayrıca NameIdentifier yazmasan da işləyib.
             };
 
             var expireMinutes = int.Parse(jwtSection["ExpireMinutes"]!);
@@ -181,16 +151,9 @@ namespace Hospital.Business.Services.Auth.Concrete
 
 
 
-
-
-  //  {
-
-
-
-    //jwt decode
 }
 
-//kodu cox tehlukesiz yazmaq yorurrr
+
 
 
     
